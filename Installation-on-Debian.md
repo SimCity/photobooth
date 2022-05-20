@@ -6,23 +6,23 @@ The installation script is intendet to work on Raspberry Pi OS based on Debian b
 **Note:** If you are using an older version of Rasperry Pi OS or Debian / Debian based distribution Node.js v12.22.x will be installed if needed!  
 
 ```
-wget https://raw.githubusercontent.com/andi34/photobooth/dev/install-raspbian.sh
-sudo bash install-raspbian.sh
+wget https://raw.githubusercontent.com/andi34/photobooth/dev/install-photobooth.sh
+sudo bash install-photobooth.sh
 ```
 On a Raspberry Pi, a username is needed to install all Pi specific options. Your OS username can be passed by the `-u` flag to the installer.  
 For the user "pi", the command to install Photobooth needs to be:
 ```
-sudo bash install-raspbian.sh -u="pi"
+sudo bash install-photobooth.sh -u="pi"
 ```
 
 By default Apache is used for an easy and no-hassle setup as NGINX and Lighttpd need some additional steps.
-To use NGINX run `sudo bash install-raspbian.sh -w="nginx"` (additional Setup note: [Cromakeying is saving without finishing saving](FAQ#cromakeying-is-saving-without-finishing-saving) ),
-To use Lighttpd as Webserver run `sudo bash install-raspbian.sh -w="lighttpd"`.  
+To use NGINX run `sudo bash install-photobooth.sh -w="nginx"` (additional Setup note: [Cromakeying is saving without finishing saving](FAQ#cromakeying-is-saving-without-finishing-saving) ),
+To use Lighttpd as Webserver run `sudo bash install-photobooth.sh -w="lighttpd"`.  
 
 Flags can be combined:  
-`sudo bash install-raspbian.sh -u="pi" -w="nginx"`
+`sudo bash install-photobooth.sh -u="pi" -w="nginx"`
 
-To get to know all options you can simply run `sudo bash install-raspbian.sh -h`.
+To get to know all options you can simply run `sudo bash install-photobooth.sh -h`.
 
 
 ## Manually install Photobooth on Raspberry Pi OS (previously called Raspbian) and on Debian / Debian based distributions:
