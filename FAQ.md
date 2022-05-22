@@ -63,6 +63,11 @@ Open `http://localhost/admin` in your Webbrowser and change the configuration fo
 
 <hr>
 
+### How can I test my current collage settings?
+Open `http://localhost/test/collage.php` in your Webbrowser and a you can find a collage that is created with your current settings.
+
+<hr>
+
 ### How to change the look of my Photobooth?
 Photobooth can be easylie styled for your personal needs via admin panel, open [localhost/admin](http://localhost/admin) in your browser and take a look at the `User Interface` options.  
 To use a private custom index you need to create the following files:
@@ -259,9 +264,7 @@ The following elements are currently not supported and not accessible through ro
 - Full Screen Mode button: Looks like modern browser only allow to change to full screen mode upon user gesture. It seems not possible to change to full-screen using Javascript.
 - Photoswipe download button: Not needed for Rotary Control. (well, if you can come up with a decent use-case, let us know).
 
-**************
-Other Remote Trigger (experimental)
-**************
+#### Remote trigger using Socket.io (experimental)
 The trigger server controls and coordinates sending commands via socket.io to the photobooth client. Next to a hardware button, any socket.io client can connect to the trigger server over the network, and send a trigger command. This gives full flexibility to integrate other backend systems for trigger signals.
 
 - Channel:  `photobooth-socket`
@@ -270,38 +273,58 @@ The trigger server controls and coordinates sending commands via socket.io to th
 
 This functionality is experimental and largely untested. Not sure if there is a use-case but if you have one, happy to learn about it. Currently this does not support rotary encoder use but could be if needed.
 
+#### Remote trigger using simple web requests
+*Note: This feature depends on the experimental Socket.io implementation and needs option `Hardware Button` - `Enable Hardware Buttons` to be active.*
+
+Simple `GET` requests can be used to trigger single pictures or collages. Those endpoints can be found under `http://[Photobooth IP]:[Hardware Button Server Port]` where:
+- `[Photobooth IP]` needs to match the configured value under `General` - `IP address of the Photobooth web server` and
+- `[Hardware Button Server Port]` the value from `Hardware Button` - `Enable Hardware Buttons`
+
+The available endpoints are:
+- `[Base Url]/` - Simple help page with all available endpoints
+- `[Base Url]/commands/start-picture` - Triggers a single picture
+- `[Base Url]/commands/start-collage` - Triggers a collage
+
+These trigger URLs can be used for example with [myStrom WiFi Buttons](https://mystrom.com/wifi-button/) or [Shelly Buttons](https://shelly.cloud/products/shelly-button-1-smart-home-automation-device/) (untested).
+
+**Installation steps for myStrom WiFi Button**
+- Be sure to connect the button to the same network as the photobooth
+- The button can be configured using the following commands
+  ```sh
+  curl --location -g --request POST http://[Button IP]/api/v1/action/single --data-raw get://[Photobooth IP]:[Hardware Button Server Port]/commands/start-picture
+
+  curl --location -g --request POST http://[Button IP]/api/v1/action/long --data-raw get://[Photobooth IP]:[Hardware Button Server Port]/commands/start-collage
+  ```
+
 <hr>
 
 ### How do I enable Kiosk Mode to automatically start Photobooth in full screen?
-Edit the LXDE Autostart Script:
+Add the autostart file:
 ```
-sudo nano /etc/xdg/lxsession/LXDE-pi/autostart
+sudo nano /etc/xdg/autostart/photobooth.desktop
 ```
-and add the following lines:
+now add the following lines:
 ```
-@xset s off
-@xset -dpms
-@xset s noblank
-@chromium-browser --noerrdialogs --disable-infobars --disable-features=Translate --no-first-run --check-for-update-interval=31536000 --kiosk http://127.0.0.1 --touch-events=enabled
+[Desktop Entry]
+Version=1.3
+Terminal=false
+Type=Application
+Name=Photobooth
+Exec=chromium-browser --noerrdialogs --disable-infobars --disable-features=Translate --no-first-run --check-for-update-interval=31536000 --kiosk http://127.0.0.1 --touch-events=enabled --use-gl=egl
+Icon=/var/www/html/resources/img/favicon-96x96.png
+StartupNotify=false
+Terminal=false
 ```
-**NOTE:** If you're using QR-Code replace `http://localhost/` with your local IP-Adress (e.g. `http://192.168.4.1`), else QR-Code does not work.
+save the file.  
+
+
+**NOTE:**  
+If you have installed Photobooth inside a subdirectory (e.g. to `/var/www/html/photobooth`), make sure you adjust the kiosk url (e.g. to `http://127.0.0.1/photobooth`) and the Icon path (e.g. to `/var/www/html/photobooth/resources/img/favicon-96x96.png`).  
+The flag `--use-gl=egl` might only be needed on a Raspberry Pi to avoid a white browser window on the first start of kiosk mode! If you're facing issues while using Photobooth on a different device, please remove that flag.  
 
 <hr>
 
-#### Enable touch events
-If touch is not working on your Raspberry Pi make sure `--touch-events=enabled` was added to your Autostart Script.  
-Edit the LXDE Autostart Script again
-```
-sudo nano /etc/xdg/lxsession/LXDE-pi/autostart
-```
-and add `--touch-events=enabled` for Chromium:
-```
-@chromium-browser --kiosk http://localhost/ --touch-events=enabled
-```
-
-<hr>
-
-#### How to hide the Mouse Cursor?
+#### How to hide the mouse cursor, disable screen blanking and screen saver?
 There are two options to hide the cursor. The first approach allows you to show the cursor for a short period of time (helpful if you use a mouse and just want to hide the cursor of some time of inactivity), or to hide it permanently.
 
 **Solution A**
@@ -309,13 +332,23 @@ To hide the Mouse Cursor we'll use "unclutter":
 ```
 sudo apt-get install unclutter
 ```
-Edit the LXDE Autostart Script again:
+Edit the LXDE Autostart Script:
 ```
 sudo nano /etc/xdg/lxsession/LXDE-pi/autostart
 ```
-and add the following line (0 describes the time after which the cursor should be hidden):
+and add the following lines:
 ```
-@unclutter -idle 0
+# Photobooth
+# turn off display power management system
+@xset -dpms
+# turn off screen blanking
+@xset s noblank
+# turn off screen saver
+@xset s off
+
+# Hide mousecursor (3 describes the time after which the cursor should be hidden)
+@unclutter -idle 3
+# Photobooth End
 ```
 
 **Solution B**
@@ -361,7 +394,7 @@ Make sure to have a stream available you can use (e.g. from your Webcam, Smartph
 A preview can also be done using the video mode of your DSLR (Linux only), but only works if you access Photobooth via [http://localhost](http://localhost) or [http://127.0.0.1](http://localhost):
 
 - Liveview **must** be supported for your camera model, [check here](http://gphoto.org/proj/libgphoto2/support.php)
-- install all dependencies `sudo apt install ffmpeg v4l2loopback-dkms -y`
+- install all dependencies `sudo apt install ffmpeg v4l2loopback-dkms v4l-utils -y`
 - create a virtual webcam `sudo modprobe v4l2loopback exclusive_caps=1 card_label="GPhoto2 Webcam"`
   - `/dev/video0` is used by default, you can use `v4l2-ctl --list-devices` to check which `/dev/*` is the correct one:  
     If it doesn't match the default setup you need to adjust the `Command to generate a live preview` inside the admin panel!
@@ -408,6 +441,43 @@ Yes you can. There's different ways depending on your needs and personal setup:
 
     For reference:
     https://github.com/andreknieriem/photobooth/pull/20
+
+<hr>
+
+### How to get better performance using gphoto2 as preview?
+By now the DSLR handling of Photobooth on Linux was done exclusively using `gphoto2 CLI` (command line interface). When taking pictures while using preview video from the same camera one command has to be stopped and another one is run after that.
+The computer terminates the connection to the camera just to reconnect immediately. Because of that there was an ugly video gap and the noises of the camera could be irritating as stopping the video sounded very similar to taking a picture. But most cameras can shoot quickly from live-view...
+The underlying libery of `gphoto2 CLI` is `libgphoto` and it can be accessed using several programming languages. Because of this we can have a python script that handles both preview and taking pictures without terminating the connection to the camera in between.
+
+To try using `gphoto-python` first execute `install-gphoto-python.sh` from the Photobooth installation subdirectory `gphoto`.
+```
+bash gphoto/install-gphoto-python.sh
+```
+After that just change your commands to use the python script. For Live preview use:
+```
+python3 cameracontrol.py
+```
+And for the take picture command:
+```
+python3 cameracontrol.py --capture-image-and-download %s
+```
+There's no need for a command to end the live preview. So just empty that field.
+
+As you possibly noticed the params of the script are designed to be similar to the ones of `gphoto2 CLI` but with some shortcuts like `-c` for `--capture-image-and-download`. If you want to know more check out the help of the script by running:
+```
+python3 cameracontrol.py --help
+```
+If you want to keep your images on the camera you need to use the same `capturetarget` config as when you were using `gphoto CLI` (see "How to keep pictures on my Camera using gphoto2?"). Set the config on the preview command like this:
+```
+python3 cameracontrol.py --set-config capturetarget=1
+```
+If you don't want to use the DSLR view as background video enable the respective setting of Photobooth and add `--bsm` to the preview command. The preview video is activated when the countdown for a photo starts and after taking a picture the video is deactivated while waiting for the next photo.
+
+If you get errors from Photobooth and want to get more information try to run the preview command manually. The script is in Photobooth's `api` folder. To do so end all running services that potentially try to access the camera with `killall gphoto2` and `killall python3` (if you added any other python scripts manually you might have to be a bit more selective than this command).
+
+Finally if you just run `venv/bin/python3 cameracontrol.py --capture-image-and-download %s` as take picture command without having a preview started it only takes a picture without starting any kind of preview and ends the script immediately after the picture. In theory `cameracontrol.py` might be able to completely replace `gphoto2 CLI` for all DSLR connection handling in the future.
+
+But by now this was not tested with distinct setups and different cameras... so feel free to give feedback!
 
 <hr>
 
@@ -472,7 +542,7 @@ Open [http://localhost/phpinfo.php](http://localhost/phpinfo.php) in your browse
 Take a look for "Loaded Configuration File", you need  sudo rights to edit the file.
 Page will look like this:
 <details><summary>CLICK ME</summary>
-<img src="../resources/img/faq/php-ini.png">
+<img src="../resources/img/faq/php-ini.png" alt="php.ini Screenshot">
 </details>
 
 <hr>
