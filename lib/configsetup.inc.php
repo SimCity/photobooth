@@ -1552,6 +1552,19 @@ $configsetup = [
             'name' => 'remotebuzzer[picturegpio]',
             'value' => $config['remotebuzzer']['picturegpio'],
         ],
+        'remotebuzzer_pictureled' => [
+            'view' => 'advanced',
+            'type' => 'checkbox',
+            'name' => 'remotebuzzer[pictureled]',
+            'value' => $config['remotebuzzer']['pictureled'],
+        ],
+        'remotebuzzer_pictureledgpio' => [
+            'view' => 'advanced',
+            'type' => 'hidden',
+            'placeholder' => $defaultConfig['remotebuzzer']['pictureledgpio'],
+            'name' => 'remotebuzzer[pictureledgpio]',
+            'value' => $config['remotebuzzer']['pictureledgpio'],
+        ],
         'remotebuzzer_collagebutton' => [
             'view' => 'advanced',
             'type' => 'checkbox',
@@ -1565,6 +1578,19 @@ $configsetup = [
             'name' => 'remotebuzzer[collagegpio]',
             'value' => $config['remotebuzzer']['collagegpio'],
         ],
+        'remotebuzzer_collageled' => [
+            'view' => 'advanced',
+            'type' => 'checkbox',
+            'name' => 'remotebuzzer[collageled]',
+            'value' => $config['remotebuzzer']['collageled'],
+        ],
+        'remotebuzzer_collageledgpio' => [
+            'view' => 'expert',
+            'type' => 'hidden',
+            'placeholder' => $defaultConfig['remotebuzzer']['collageledgpio'],
+            'name' => 'remotebuzzer[collageledgpio]',
+            'value' => $config['remotebuzzer']['collageledgpio'],
+        ],
         'remotebuzzer_printbutton' => [
             'view' => 'expert',
             'type' => 'checkbox',
@@ -1577,6 +1603,19 @@ $configsetup = [
             'placeholder' => $defaultConfig['remotebuzzer']['printgpio'],
             'name' => 'remotebuzzer[printgpio]',
             'value' => $config['remotebuzzer']['printgpio'],
+        ],
+        'remotebuzzer_printled' => [
+            'view' => 'expert',
+            'type' => 'checkbox',
+            'name' => 'remotebuzzer[printled]',
+            'value' => $config['remotebuzzer']['printled'],
+        ],
+        'remotebuzzer_printledgpio' => [
+            'view' => 'expert',
+            'type' => 'hidden',
+            'placeholder' => $defaultConfig['remotebuzzer']['printledgpio'],
+            'name' => 'remotebuzzer[printledgpio]',
+            'value' => $config['remotebuzzer']['printledgpio'],
         ],
         'remotebuzzer_shutdownbutton' => [
             'view' => 'expert',
@@ -1601,6 +1640,19 @@ $configsetup = [
             'range_max' => 9,
             'range_step' => 1,
             'unit' => 'seconds',
+        ],
+        'remotebuzzer_shutdownled' => [
+            'view' => 'expert',
+            'type' => 'checkbox',
+            'name' => 'remotebuzzer[shutdownled]',
+            'value' => $config['remotebuzzer']['shutdownled'],
+        ],
+        'remotebuzzer_shutdownledgpio' => [
+            'view' => 'expert',
+            'type' => 'hidden',
+            'placeholder' => $defaultConfig['remotebuzzer']['shutdownledgpio'],
+            'name' => 'remotebuzzer[shutdownledgpio]',
+            'value' => $config['remotebuzzer']['shutdownledgpio'],
         ],
         'remotebuzzer_rotaryclkgpio' => [
             'view' => 'expert',

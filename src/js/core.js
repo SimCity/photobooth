@@ -380,8 +380,8 @@ const photoBooth = (function () {
         api.closeGallery();
         api.showResultInner(false);
 
-        remoteBuzzerClient.inProgress(true);
         takingPic = true;
+        remoteBuzzerClient.takingPicture(takingPic);
         photoboothTools.console.logDev('Taking picture in progress: ' + takingPic);
 
         if (api.isTimeOutPending()) {
@@ -449,6 +449,7 @@ const photoBooth = (function () {
 
     api.takePic = function (photoStyle, retry) {
         remoteBuzzerClient.inProgress(true);
+
 
         api.stopPreviewAndCaptureFromVideo();
 
@@ -668,7 +669,7 @@ const photoBooth = (function () {
                 loading.append($('<p class="text-muted">').text(data.error));
             }
             takingPic = false;
-            remoteBuzzerClient.inProgress(false);
+            remoteBuzzerClient.takingPicture(takingPic);
             photoboothTools.console.logDev('Taking picture in progress: ' + takingPic);
             if (config.dev.reload_on_error) {
                 loading.append($('<p>').text(photoboothTools.getTranslation('auto_reload')));
@@ -762,7 +763,7 @@ const photoBooth = (function () {
         preloadImage.src = imageUrl;
 
         takingPic = false;
-        remoteBuzzerClient.inProgress(false);
+        remoteBuzzerClient.takingPicture(takingPic);
         photoboothTools.console.logDev('Taking picture in progress: ' + takingPic);
 
         api.resetTimeOut();
@@ -875,7 +876,7 @@ const photoBooth = (function () {
         }
 
         takingPic = false;
-        remoteBuzzerClient.inProgress(false);
+        remoteBuzzerClient.takingPic(takingPic);
         photoboothTools.console.logDev('Taking picture in progress: ' + takingPic);
 
         api.resetTimeOut();
@@ -936,6 +937,8 @@ const photoBooth = (function () {
 
         gallery.addClass('gallery--open');
 
+        remoteBuzzerClient.printingAvaiable(config.print.from_gallery);
+
         setTimeout(() => {
             gallery.find('.gallery__inner').show();
             rotaryController.focusSet('#gallery');
@@ -950,12 +953,16 @@ const photoBooth = (function () {
         gallery.find('.gallery__inner').hide();
         gallery.removeClass('gallery--open');
 
+        
+
         api.showResultInner(true);
 
         if (resultPage.is(':visible')) {
             rotaryController.focusSet('#result');
+            remoteBuzzerClient.printingAvaiable(config.print.from_result);
         } else if (startPage.is(':visible')) {
             rotaryController.focusSet('#start');
+            remoteBuzzerClient.printingAvaiable(false);
         }
     };
 
@@ -984,12 +991,12 @@ const photoBooth = (function () {
         function timerFunction() {
             element.text(Number(current) + Number(config.picture.cntdwn_offset));
             current--;
-
+            remoteBuzzerClient.countdown(current);
             element.removeClass('tick');
 
             if (count < start) {
                 window.setTimeout(() => element.addClass('tick'), 50);
-                window.setTimeout(timerFunction, 1000);
+                window.setTimeout(timerFunction, 1000);  
             } else {
                 element.empty();
                 cb();
@@ -1010,7 +1017,7 @@ const photoBooth = (function () {
             photoboothTools.modal.open('#print_mesg');
             isPrinting = true;
 
-            remoteBuzzerClient.inProgress(true);
+            remoteBuzzerClient.printing(isPrinting);
 
             setTimeout(function () {
                 $.ajax({
@@ -1042,7 +1049,8 @@ const photoBooth = (function () {
                             }
                             cb();
                             isPrinting = false;
-                            remoteBuzzerClient.inProgress(false);
+
+                            remoteBuzzerClient.printing(isPrinting);
                         }, config.print.time);
                     },
                     error: (jqXHR, textStatus) => {
@@ -1064,7 +1072,8 @@ const photoBooth = (function () {
                             );
                             cb();
                             isPrinting = false;
-                            remoteBuzzerClient.inProgress(false);
+
+                            remoteBuzzerClient.printing(isPrinting);
                         }, 5000);
                     }
                 });

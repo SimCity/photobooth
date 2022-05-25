@@ -119,6 +119,46 @@ function initRemoteBuzzerFromDOM() {
             }
         };
 
+        api.printing = function (flag) {
+            if (this.enabled()) {
+                if (flag) {
+                    this.emitToServer('printing-in-progress');
+                } else {
+                    this.emitToServer('printing-completed');
+                }
+            }
+            inProgress(flag);
+        };
+
+        api.printingAvaiable = function (flag) {
+            if (this.enabled()) {
+                if (flag) {
+                    this.emitToServer('printing-avaiable');
+                } else {
+                    this.emitToServer('printing-unavaiable');
+                }
+            }
+            inProgress(flag);
+        };
+
+        api.takingPicture(flag) = function (flag) {
+            if (this.enabled()) {
+                if (flag) {
+                    this.emitToServer('picture-in-progress');
+                } else {
+                    this.emitToServer('picture-completed');
+                }
+            }
+            inProgress(flag);
+        };
+
+        api.countdown() = function ()
+        {
+            if (this.enabled()) {
+                this.emitToServer('countdown-pulse');
+            }
+        };
+
         api.collageWaitForNext = function () {
             if (this.enabled()) {
                 this.emitToServer('collage-wait-for-next');
@@ -180,6 +220,7 @@ function initRemoteBuzzerFromDOM() {
 
         api.init = function () {
             // nothing to init
+            
         };
 
         api.enabled = function () {
