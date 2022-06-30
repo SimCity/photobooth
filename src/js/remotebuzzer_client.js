@@ -141,7 +141,7 @@ function initRemoteBuzzerFromDOM() {
             inProgress(flag);
         };
 
-        api.takingPicture(flag) = function (flag) {
+        api.takingPicture = function (flag) {
             if (this.enabled()) {
                 if (flag) {
                     this.emitToServer('picture-in-progress');
@@ -152,7 +152,7 @@ function initRemoteBuzzerFromDOM() {
             inProgress(flag);
         };
 
-        api.countdown() = function ()
+        api.countdown = function ()
         {
             if (this.enabled()) {
                 this.emitToServer('countdown-pulse');
