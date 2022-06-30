@@ -10,6 +10,10 @@ RUNNING_ON_PI=true
 FORCE_RASPBERRY_PI=false
 DATE=$(date +"%Y%m%d-%H-%M")
 IPADDRESS=$(hostname -I | cut -d " " -f 1)
+if [ ! -d "/tmp/photobooth" ]; then
+    mkdir -p "/tmp/photobooth"
+fi
+PHOTOBOOTH_LOG="/tmp/photobooth/$DATE-photobooth.log"
 
 BRANCH="dev"
 GIT_INSTALL=true
@@ -19,6 +23,7 @@ KIOSK_MODE=false
 HIDE_MOUSE=false
 USB_SYNC=false
 SETUP_CUPS=false
+GPHOTO_PREVIEW=true
 CUPS_REMOTE_ANY=false
 CHROMIUM_DEFAULT_FLAGS="--noerrdialogs --disable-infobars --disable-features=Translate --no-first-run --check-for-update-interval=31536000 --touch-events=enabled"
 AUTOSTART_FILE=""
@@ -29,27 +34,21 @@ NEEDED_NODE_VERSION="v12.22.(4 or newer)"
 NODEJS_NEEDS_UPDATE=false
 NODEJS_CHECKED=false
 
-COMMON_PACKAGES=(
-    'curl'
-    'gphoto2'
-    'libimage-exiftool-perl'
-    'nodejs'
-    'php-gd'
-    'php-zip'
-    'rsync'
-    'udisks2'
-)
+COMMON_PACKAGES=()
 
 function info {
     echo -e "\033[0;36m${1}\033[0m"
+    echo "${1}" >> "$PHOTOBOOTH_LOG"
 }
 
 function warn {
     echo -e "\033[0;33m${1}\033[0m"
+    echo "WARN: ${1}" >> "$PHOTOBOOTH_LOG"
 }
 
 function error {
     echo -e "\033[0;31m${1}\033[0m"
+    echo "ERROR: ${1}" >> "$PHOTOBOOTH_LOG"
 }
 
 print_spaces() {
@@ -321,7 +320,31 @@ common_software() {
             'yarn'
         )
     fi
-    
+
+    # All required packages independend of Raspberry Pi.
+    # Note: raspberrypi-kernel-header are needed before v4l2loopback-dkms
+    if [ "$RUNNING_ON_PI" = true ]; then
+        COMMON_PACKAGES+=('raspberrypi-kernel-headers')
+    fi
+
+    COMMON_PACKAGES+=(
+        'curl'
+        'ffmpeg'
+        'gphoto2'
+        'libimage-exiftool-perl'
+        'nodejs'
+        'php-gd'
+        'php-zip'
+        'python3'
+        'python3-gphoto2'
+        'python3-psutil'
+        'python3-zmq'
+        'rsync'
+        'udisks2'
+        'v4l2loopback-dkms'
+        'v4l-utils'
+    )
+
     info "### Installing common software..."
     for package in "${COMMON_PACKAGES[@]}"; do
         if [ $(dpkg-query -W -f='${Status}' ${package} 2>/dev/null | grep -c "ok installed") -eq 1 ]; then
@@ -430,8 +453,8 @@ general_setup() {
         info "$INSTALLFOLDERPATH not found."
     fi
 
-    if [ "$INSTALLFOLDER" == "photobooth" ]; then
-        URL="http://$IPADDRESS/photobooth"
+    if [ "$SUBFOLDER" = true ]; then
+        URL="http://$IPADDRESS/$INSTALLFOLDER"
     else
         URL="http://$IPADDRESS"
     fi
@@ -478,8 +501,8 @@ chromium_shortcut() {
     echo "Terminal=false" >> "$AUTOSTART_FILE"
     echo "Type=Application" >> "$AUTOSTART_FILE"
     echo "Name=Photobooth" >> "$AUTOSTART_FILE"
-    if [ "$INSTALLFOLDER" == "photobooth" ]; then
-        echo "Exec=chromium-browser --kiosk http://127.0.0.1/photobooth $CHROMIUM_FLAGS" >> "$AUTOSTART_FILE"
+    if [ "$SUBFOLDER" = true ]; then
+        echo "Exec=chromium-browser --kiosk http://127.0.0.1/$INSTALLFOLDER $CHROMIUM_FLAGS" >> "$AUTOSTART_FILE"
     else
         echo "Exec=chromium-browser --kiosk http://127.0.0.1 $CHROMIUM_FLAGS" >> "$AUTOSTART_FILE"
     fi
@@ -514,10 +537,10 @@ general_permissions() {
         chown www-data:www-data "/var/www/.yarnrc"
     fi
 
-    if [ -d "/var/www/.cache/yarn" ]; then
-        info "### Cache folder for yarn found."
-        info "### Fixing permissions on yarns cache folder."
-        chown -R www-data:www-data "/var/www/.cache/yarn/"
+    if [ -d "/var/www/.cache" ]; then
+        info "### Cache folder found."
+        info "### Fixing permissions on cache folder."
+        chown -R www-data:www-data "/var/www/.cache"
     fi
 
     if [ -f "/usr/lib/gvfs/gvfs-gphoto2-volume-monitor" ]; then
@@ -629,6 +652,18 @@ cups_setup() {
     fi
 }
 
+gphoto_preview() {
+    if [ -d "/etc/systemd/system" ] && [ -d "/usr" ]; then
+        wget https://raw.githubusercontent.com/andi34/photobooth/dev/gphoto/ffmpeg-webcam.service -O "/etc/systemd/system/ffmpeg-webcam.service"
+        wget https://raw.githubusercontent.com/andi34/photobooth/dev/gphoto/ffmpeg-webcam.sh -O "/usr/ffmpeg-webcam.sh"
+        chmod +x "/usr/ffmpeg-webcam.sh"
+        systemctl start ffmpeg-webcam.service
+        systemctl enable ffmpeg-webcam.service
+    else
+        warn "WARNING: Couldn't install gphoto2 Webcam Service! Skipping!"
+    fi
+}
+
 ############################################################
 #                                                          #
 # General checks before the installation process can start #
@@ -677,7 +712,7 @@ if [ "$REPLY" != "${REPLY#[Yy]}" ]; then
     info "### We will install Photobooth into /var/www/html."
     SUBFOLDER=false
 else
-    info "### We will install Photobooth into /var/www/html/photobooth."
+    info "### We will install Photobooth into /var/www/html/$INSTALLFOLDER."
 fi
 
 print_spaces
@@ -689,6 +724,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]
 then
     SETUP_CUPS=true
     COMMON_PACKAGES+=('cups')
+    info "### We will install CUPS if not installed already."
     print_spaces
 
     echo -e "\033[0;33m### By default CUPS can only be accessed via localhost."
@@ -697,6 +733,9 @@ then
     if [[ $REPLY =~ ^[Yy]$ ]]
     then
         CUPS_REMOTE_ANY=true
+        info "### We will allow remote access to CUPS over IP from all devices inside your network."
+    else
+        info "### We won't allow remote access to CUPS over IP from all devices inside your network."
     fi
 
     print_spaces
@@ -708,6 +747,9 @@ then
     if [[ $REPLY =~ ^[Yy]$ ]]
     then
         COMMON_PACKAGES+=('printer-driver-gutenprint')
+        info "### We will install Gutenprint drivers if not installed already."
+    else
+        info "### We won't install Gutenprint drivers if not installed already."
     fi
 fi
 
@@ -720,6 +762,9 @@ if [ -d "/etc/xdg/autostart" ]; then
     if [[ $REPLY =~ ^[Yy]$ ]]
     then
         KIOSK_MODE=true
+        info "### We will open Chromium in Kiosk Mode at every boot."
+    else
+        info "### We won't open Chromium in Kiosk Mode at every boot."
     fi
 
     print_spaces
@@ -733,6 +778,9 @@ if [ "$RUNNING_ON_PI" = true ]; then
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         HIDE_MOUSE=true
         COMMON_PACKAGES+=('unclutter')
+        info "### We will hide the mouse cursor on every start and disable the screen saver."
+    else
+        info "### We won't hide the mouse cursor on every start and won't disable the screen saver."
     fi
 
     print_spaces
@@ -742,20 +790,41 @@ if [ "$RUNNING_ON_PI" = true ]; then
     echo -e "\033[0m"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         PI_CAMERA=true
+        info "### We will generate a personal configuration with all needed"
+        info "    changes to use a Raspberry Pi (HQ) Camera to take pictures."
+    else
+        info "### We won't generate a personal configuration file to use a Raspberry Pi (HQ) Camera to take pictures."
     fi
 
     print_spaces
 
     echo -e "\033[0;33m### Sync to USB - this feature will automatically copy (sync) new pictures to a USB stick."
-    echo -e "### The actual configuration will be done in the admin panel but we need to setup Raspberry Pi OS first"
-    ask_yes_no "### Would you like to enable the USB sync file backup? [y/N] " "Y"
+    echo -e "### The actual configuration will be done in the admin panel but we need to setup Raspberry Pi OS first."
+    ask_yes_no "### Would you like to setup Raspberry Pi OS to use the USB sync file backup? [y/N] " "Y"
     echo -e "\033[0m"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         USB_SYNC=true
+        info "### We will setup Raspberry Pi OS to be able to use the USB sync file backup."
+    else
+        info "### We won't setup Raspberry Pi OS to use the USB sync file backup."
     fi
+
+    print_spaces
 fi
 # Pi specific setup end
 
+    echo -e "\033[0;33m### Do you like to install a service to set up a virtual webcam that gphoto2 can stream video to"
+    echo -e "### (needed for preview from gphoto2)? Your camera must be supported by gphoto2 for liveview."
+    echo -e "### Note: This will disable other webcam interfaces on a Raspberry Pi (e.g. Pi Camera)."
+    ask_yes_no "### If unsure, type N. [y/N] " "N"
+    echo -e "\033[0m"
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        GPHOTO_PREVIEW=true
+        info "### We will install a service to set up a virtual webcam for gphoto2."
+    else
+        GPHOTO_PREVIEW=false
+        info "### We won't install a service to set up a virtual webcam for gphoto2."
+    fi
 
 ############################################################
 #                                                          #
@@ -780,6 +849,10 @@ if [ "$KIOSK_MODE" = true ] || [ "$HIDE_MOUSE" = true ] ; then
 fi
 if [ "$SETUP_CUPS" = true ]; then
     cups_setup
+fi
+
+if [ "$GPHOTO_PREVIEW" = true ]; then
+    gphoto_preview
 fi
 
 print_logo
