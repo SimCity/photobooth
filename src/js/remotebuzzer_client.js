@@ -127,7 +127,7 @@ function initRemoteBuzzerFromDOM() {
                     this.emitToServer('printing-completed');
                 }
             }
-            inProgress(flag);
+            this.inProgress(flag);
         };
 
         api.printingAvaiable = function (flag) {
@@ -138,7 +138,7 @@ function initRemoteBuzzerFromDOM() {
                     this.emitToServer('printing-unavaiable');
                 }
             }
-            inProgress(flag);
+            this.inProgress(flag);
         };
 
         api.takingPicture = function (flag) {
@@ -149,7 +149,7 @@ function initRemoteBuzzerFromDOM() {
                     this.emitToServer('picture-completed');
                 }
             }
-            inProgress(flag);
+            this.inProgress(flag);
         };
 
         api.countdown = function ()
