@@ -27,7 +27,7 @@ if ($config['remotebuzzer']['usebuttons'] || $config['remotebuzzer']['userotary'
 
         print "\t<!-- Remote Buzzer enabled --- starting server -->\n";
 
-        proc_close(proc_open(sudo $config['nodebin']['cmd'] . ' resources/js/remotebuzzer_server.js 1>' . $logfile . ' 2>&1 &', [], $foo));
+        proc_close(proc_open('sudo ' . $config['nodebin']['cmd'] . ' resources/js/remotebuzzer_server.js 1>' . $logfile . ' 2>&1 &', [], $foo));
     } else {
         print "\t<!-- Remote Buzzer Enabled --- server already started (port in use) -->\n";
     }
